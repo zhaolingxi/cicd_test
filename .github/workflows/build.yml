@@ -12,9 +12,9 @@ permissions:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-22.04, windows-2022]
-    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
@@ -34,26 +34,24 @@ jobs:
         if: runner.os == 'Windows'
         run: cmake --build build --config Release
 
-      # 这里按你的项目改成实际产物名/路径
-      - name: Package (Linux)
+      - name: Package with CPack (Linux)
         if: runner.os == 'Linux'
         run: |
-          mkdir -p dist/app-linux
-          cp -v build/your_app dist/app-linux/
-          tar -czf your_app-linux.tar.gz -C dist app-linux
+          cd build
+          cpack -G TGZ
+          cpack -G DEB
 
-      - name: Package (Windows)
+      - name: Package with CPack (Windows)
         if: runner.os == 'Windows'
-        shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force dist\app-windows | Out-Null
-          Copy-Item -Force build\Release\your_app.exe dist\app-windows\
-          Compress-Archive -Force -Path dist\app-windows\* -DestinationPath your_app-windows.zip
+          cd build
+          cpack -G ZIP
 
       - name: Upload assets to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            your_app-linux.tar.gz
-            your_app-windows.zip
+            build/*.tar.gz
+            build/*.deb
+            build/*.zip
